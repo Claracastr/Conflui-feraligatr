@@ -16,7 +16,7 @@ A solução completa prevê dados obtidos por processamento de imagens de câmer
 
 **Estrutura inicial de testes**
 
-Os testes iniciais do Capim Vivo serão organizados para verificar a ocupação apresentada no mapa, a atualização das informações e a separação entre os acessos de visitantes e da administração.
+Os testes iniciais do Conflui serão organizados para verificar a ocupação apresentada no mapa, a atualização das informações e a separação entre os acessos de visitantes e da administração.
 
 | Teste | Resultado esperado |
 | --- | --- |
@@ -33,7 +33,7 @@ A prova de conceito com vídeo será avaliada em uma área delimitada, comparand
 
 ## Documentação inicial do projeto
 
-O Capim Vivo será um sistema web para acompanhar a quantidade e a movimentação de pessoas no Capim Dourado Shopping, em Palmas–TO. A solução utilizará a planta real do shopping com um mapa de calor dinâmico, permitindo visualizar a distribuição das pessoas pelos espaços monitorados.
+O Conflui será um sistema web para acompanhar a quantidade e a movimentação de pessoas no Capim Dourado Shopping, em Palmas–TO. A solução utilizará a planta real do shopping com um mapa de calor dinâmico, permitindo visualizar a distribuição das pessoas pelos espaços monitorados.
 
 O objetivo é apoiar a administração na compreensão das concentrações, das regiões com menor circulação e das mudanças de movimento ao longo do tempo. Para os visitantes, a proposta é oferecer uma consulta simples da ocupação atual.
 
