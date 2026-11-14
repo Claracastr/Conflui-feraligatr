@@ -7,6 +7,8 @@
 Para melhor experiência entrar com o login email:clara.castrosts@gmail.com|senha:Cc@840352170612
 **Código-fonte:** https://github.com/Claracastr/Conflui-feraligatr  
 **Guia de instalação:** [README_INSTRUCOES_EXECUCAO.md](README_INSTRUCOES_EXECUCAO.md)
+**Link Video** https://youtu.be/XZdXd5d4cSc
+**O Resumo do mvp para os avaliadores está em pdf na pasta docs**
 
 ---
 
