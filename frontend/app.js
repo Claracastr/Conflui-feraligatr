@@ -5,6 +5,7 @@ import {
   persist as persistApi,
   loadView,
   cache,
+  clearCache,
   opening,
   closing,
   profileKey,
@@ -128,8 +129,10 @@ function persist() {
   });
 }
 async function startSession() {
+  clearCache();
   const catalog = await bootstrap(state);
   applyCatalog(catalog.sectors, catalog.floors);
+  state.mode = cache.demo ? "demo" : "admin";
   remember(state);
   await loadView(state);
   render();
@@ -229,7 +232,7 @@ function botanicalMark() {
   return `<span class="capim-symbol" aria-hidden="true"><svg viewBox="0 0 48 54" fill="none"><g stroke="currentColor" stroke-width="1.6"><path d="M24 49 Q13 33 10 16M24 49V12M24 49Q35 31 38 20M10 16L24 12L38 20"/><circle cx="10" cy="12" r="5"/><circle cx="24" cy="7" r="5"/><circle cx="39" cy="16" r="5"/><circle cx="10" cy="12" r="2"/><circle cx="24" cy="7" r="2"/><circle cx="39" cy="16" r="2"/></g></svg></span>`;
 }
 function header() {
-  return `<main class="main"><header class="topbar"><a class="brand toplogo" href="#" id="home">${botanicalMark()}<span>conflui<span style="color:#b18a49">.</span></span></a><div class="top-location"><span>CAPIM DOURADO</span><small>Inteligência de espaços · Palmas, TO</small></div><div class="top-actions"><span class="badge demo">${cache.mode === "simulator" ? "◇ Ambiente simulado" : "Medições por vídeo"}</span><span class="adminsession">Central administrativa</span><button class="btn" id="logout">Sair</button></div></header><div class="adminbar"><nav aria-label="Navegação administrativa">${nav(true)}</nav><button class="btn" id="present">${state.present ? "Sair da apresentação" : "⛶ Apresentar"}</button></div>`;
+  return `<main class="main"><header class="topbar"><a class="brand toplogo" href="#" id="home">${botanicalMark()}<span>conflui<span style="color:#b18a49">.</span></span></a><div class="top-location"><span>CAPIM DOURADO</span><small>Inteligência de espaços · Palmas, TO</small></div><div class="top-actions"><span class="badge demo">${cache.mode === "simulator" ? (cache.demo ? "◇ Dados simulados · sem monitoramento real" : "◇ Ambiente simulado") : "Medições por vídeo"}</span><span class="adminsession">${state.mode === "demo" ? "Modo demonstração · Somente leitura" : "Central administrativa"}</span><button class="btn" id="logout">Sair</button></div></header><div class="adminbar"><nav aria-label="Navegação administrativa">${nav(true)}</nav><button class="btn" id="present">${state.present ? "Sair da apresentação" : "⛶ Apresentar"}</button></div>`;
 }
 function heading() {
   let info =
@@ -566,7 +569,7 @@ function renderContent() {
     bindLogin();
     return;
   }
-  state.mode = "admin";
+  state.mode = cache.demo ? "demo" : "admin";
   destroyMaps();
   document.body.className =
     "administrative botanical" + (state.present ? " presentation" : "");
@@ -586,6 +589,13 @@ function renderContent() {
     `<div id="favorites-slot"></div>` +
     content +
     `<footer class="foot"><span>CONFLUI · PROPOSTA CONCEITUAL PARA O CAPIM DOURADO</span><span>Identidade original inspirada no capim-dourado · ${cache.mode === "simulator" ? "Dados sintéticos · Sem câmeras conectadas." : "Dados de vídeo · Consulte a cobertura das câmeras."}</span></footer></main>`;
+  if (cache.demo) {
+    app
+      .querySelectorAll(
+        "#new-event, #add-event, #new-special, #create-program, #edit-program, #favorite-toggle, [data-delete-event]",
+      )
+      .forEach((control) => control.remove());
+  }
   bind();
   bindExtra();
   bindDomain();
@@ -1110,9 +1120,28 @@ function bindFavorite() {
     };
 }
 function loginMarkup() {
-  return `<div class="login-layout"><section class="login-art"><a href="#" class="brand" id="login-home">${botanicalMark()}conflui.</a><div class="botanical-stems" aria-hidden="true"><svg viewBox="0 0 500 420" fill="none"><g stroke="currentColor" stroke-width="1.2"><path d="M260 410Q180 190 110 95M260 410Q260 170 250 55M260 410Q340 220 390 120M260 410Q225 200 180 145"/><circle cx="108" cy="84" r="20"/><circle cx="108" cy="84" r="13"/><circle cx="249" cy="43" r="24"/><circle cx="249" cy="43" r="16"/><circle cx="394" cy="109" r="20"/><circle cx="394" cy="109" r="13"/><circle cx="177" cy="134" r="16"/><circle cx="177" cy="134" r="9"/><path d="M108 64v40M88 84h40M249 19v48M225 43h48M394 89v40M374 109h40M177 118v32M161 134h32" opacity=".4"/></g></svg></div><div class="flow-art" aria-hidden="true"><svg viewBox="0 0 600 600"><g fill="none" stroke="currentColor">${Array.from({ length: 12 }, (_, i) => `<path d="M-80 ${100 + i * 23} C 230 ${-150 + i * 20}, 180 ${620 + i * 4}, 690 ${250 + i * 21}" stroke-width="${i % 4 === 0 ? 2 : 1}"/>`).join("")}</g></svg></div><div class="login-art-copy"><span class="eyebrow">INTELIGÊNCIA DE ESPAÇOS</span><h1>O movimento<br>ganha sentido.</h1><p>Das tramas do Tocantins<br>às conexões de cada espaço.</p></div><small>IDENTIDADE CONCEITUAL · CAPIM-DOURADO · TOCANTINS</small></section><section class="login-form-side"><span class="back-public">ACESSO EXCLUSIVO À ADMINISTRAÇÃO</span><div class="login-content"><span class="eyebrow">ÁREA ADMINISTRATIVA</span><h2>Bem-vindo de volta.</h2><p>Acesse a central de análise do Conflui.</p><div class="login-demo-note">Entre com o administrador criado no backend. O ambiente identifica separadamente dados simulados e medições por vídeo.</div><form id="login-form"><label>E-mail<input type="email" id="login-email" placeholder="seu.email@exemplo.com" autocomplete="on" required></label><label>Senha<div class="password-wrap"><input type="password" id="login-password" placeholder="Sua senha" autocomplete="on" minlength="6" required><button type="button" id="show-password" aria-label="Mostrar senha">Mostrar</button></div></label><p id="login-error" role="alert"></p><button class="btn primary login-submit" type="submit">Acessar a central →</button></form><div class="login-or"><span></span>ou<span></span></div><p class="login-security-note">Autenticação por sessão com expiração. O tipo de dado depende do ambiente configurado no backend.</p></div></section></div>`;
+  return `<div class="login-layout"><section class="login-art"><a href="#" class="brand" id="login-home">${botanicalMark()}conflui.</a><div class="botanical-stems" aria-hidden="true"><svg viewBox="0 0 500 420" fill="none"><g stroke="currentColor" stroke-width="1.2"><path d="M260 410Q180 190 110 95M260 410Q260 170 250 55M260 410Q340 220 390 120M260 410Q225 200 180 145"/><circle cx="108" cy="84" r="20"/><circle cx="108" cy="84" r="13"/><circle cx="249" cy="43" r="24"/><circle cx="249" cy="43" r="16"/><circle cx="394" cy="109" r="20"/><circle cx="394" cy="109" r="13"/><circle cx="177" cy="134" r="16"/><circle cx="177" cy="134" r="9"/><path d="M108 64v40M88 84h40M249 19v48M225 43h48M394 89v40M374 109h40M177 118v32M161 134h32" opacity=".4"/></g></svg></div><div class="flow-art" aria-hidden="true"><svg viewBox="0 0 600 600"><g fill="none" stroke="currentColor">${Array.from({ length: 12 }, (_, i) => `<path d="M-80 ${100 + i * 23} C 230 ${-150 + i * 20}, 180 ${620 + i * 4}, 690 ${250 + i * 21}" stroke-width="${i % 4 === 0 ? 2 : 1}"/>`).join("")}</g></svg></div><div class="login-art-copy"><span class="eyebrow">INTELIGÊNCIA DE ESPAÇOS</span><h1>O movimento<br>ganha sentido.</h1><p>Das tramas do Tocantins<br>às conexões de cada espaço.</p></div><small>IDENTIDADE CONCEITUAL · CAPIM-DOURADO · TOCANTINS</small></section><section class="login-form-side"><span class="back-public">ACESSO EXCLUSIVO À ADMINISTRAÇÃO</span><div class="login-content"><span class="eyebrow">ÁREA ADMINISTRATIVA</span><h2>Bem-vindo de volta.</h2><p>Acesse a central de análise do Conflui.</p><div class="login-demo-note">Entre com o administrador criado no backend. O ambiente identifica separadamente dados simulados e medições por vídeo.</div><form id="login-form"><label>E-mail<input type="email" id="login-email" placeholder="seu.email@exemplo.com" autocomplete="on" required></label><label>Senha<div class="password-wrap"><input type="password" id="login-password" placeholder="Sua senha" autocomplete="on" minlength="6" required><button type="button" id="show-password" aria-label="Mostrar senha">Mostrar</button></div></label><p id="login-error" role="alert"></p><button class="btn primary login-submit" type="submit">Acessar a central →</button></form><div class="login-or"><span></span>ou<span></span></div><button type="button" id="demo-login" class="btn demo-access">Explorar demonstração →</button><p class="login-security-note" id="demo-note">Conheça o Conflui com dados simulados, sem precisar criar uma conta.</p><p class="login-security-note">Autenticação por sessão com expiração. O tipo de dado depende do ambiente configurado no backend.</p></div></section></div>`;
 }
 function bindLogin() {
+  const errorMessage = document.querySelector("#login-error");
+  document.querySelector("#demo-login").onclick = async () => {
+    const button = document.querySelector("#demo-login");
+    errorMessage.textContent = "";
+    button.disabled = true;
+    button.textContent = "Abrindo demonstração...";
+    try {
+      await request("/auth/demo", {
+        method: "POST",
+      });
+      await startSession();
+    } catch (error) {
+      cache.demo = false;
+      errorMessage.textContent =
+        error.message || "Não foi possível iniciar a demonstração.";
+      button.disabled = false;
+      button.textContent = "Explorar demonstração →";
+    }
+  };
   document.querySelector("#login-home").onclick = (e) => e.preventDefault();
   document.querySelector("#show-password").onclick = () => {
     let p = document.querySelector("#login-password");
@@ -1121,6 +1150,8 @@ function bindLogin() {
   document.querySelector("#login-form").onsubmit = async (e) => {
     e.preventDefault();
     let b = document.querySelector(".login-submit");
+    errorMessage.textContent = "";
+    clearCache();
     b.disabled = true;
     b.textContent = "Entrando…";
     try {
@@ -1133,7 +1164,7 @@ function bindLogin() {
       });
       await startSession();
     } catch (error) {
-      document.querySelector("#login-error").textContent = error.message;
+      errorMessage.textContent = error.message;
       b.disabled = false;
       b.textContent = "Acessar a central";
     }
@@ -1183,14 +1214,14 @@ function bindExtra() {
   if (home)
     home.onclick = (e) => {
       e.preventDefault();
-      state.mode = "admin";
+      state.mode = cache.demo ? "demo" : "admin";
       changePage("map");
     };
   let entry = document.querySelector("#adminentry");
   if (entry)
     entry.onclick = () => {
       if (state.session) {
-        state.mode = "admin";
+        state.mode = cache.demo ? "demo" : "admin";
         state.page = "map";
         state.live = true;
         render();
@@ -1202,14 +1233,30 @@ function bindExtra() {
   let logout = document.querySelector("#logout");
   if (logout)
     logout.onclick = async () => {
-      await request("/auth/logout", { method: "POST" });
-      cache.live = null;
-      cache.history.clear();
-      cache.profiles.clear();
-      cache.calendar.clear();
+      try {
+        await request("/auth/logout", { method: "POST" });
+      } catch (error) {
+        if (error.status !== 401) {
+          toast("Não foi possível encerrar a sessão: " + error.message);
+          return;
+        }
+      }
+      clearCache();
+      state.favorites = [];
+      state.events = [];
+      state.programs = [];
+      state.special = [];
+      state.assistantMessages = [];
+      state.assistantContext = {
+        date: "",
+        start: "",
+        end: "",
+        sector: "",
+        event: "",
+      };
       loadingKey = "";
       state.session = false;
-      state.mode = "admin";
+      state.mode = cache.demo ? "demo" : "admin";
       state.login = true;
       state.present = false;
       render();

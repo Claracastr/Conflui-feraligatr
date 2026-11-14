@@ -51,9 +51,130 @@ def test_auth_permissions_logout(client):
         json={"email": "admin@test.local", "password": "SomenteParaTestes123!"},
     )
     assert r.status_code == 200 and "HttpOnly" in r.headers["set-cookie"]
+    assert client.get("/auth/me").json()["demo"] is False
+    assert client.post("/events", json=event()).status_code == 201
     assert client.get("/auth/me").json()["data_mode"] == "simulator"
     assert client.post("/auth/logout").status_code == 204
     assert client.get("/auth/me").status_code == 401
+
+
+def test_demo_session_reads_and_assistant(client):
+    response = client.post("/auth/demo")
+    assert response.status_code == 200
+    assert response.json()["demo"] is True
+    assert response.json()["id"] == "demo-viewer"
+    assert "HttpOnly" in response.headers["set-cookie"]
+    assert client.get("/auth/me").json()["demo"] is True
+
+    assert client.get("/auth/logout").status_code == 405
+    assert client.get("/occupancy/live").status_code == 200
+    assert (
+        client.get("/occupancy/history?date=2026-01-02&minute=1080").status_code
+        == 200
+    )
+    assert client.get("/events").status_code == 200
+    assert client.get("/calendar?year=2026&month=1").status_code == 200
+    assert client.get("/profiles?date=2026-01-02").status_code == 200
+    assert (
+        client.get(
+            "/reports/occupancy?date=2026-01-02&minute=1080&format=csv"
+        ).status_code
+        == 200
+    )
+    assistant = client.post(
+        "/assistant/analyze",
+        json={
+            "message": "Como estava a praça central no dia 02/01/2026 às 16h?",
+            "context": {"date": "2026-01-02", "time": "16:00"},
+        },
+    )
+    assert assistant.status_code == 200
+    assert assistant.json()["mode"] == "demonstrativo"
+
+
+def test_demo_cannot_write_and_logout_invalidates_session(client):
+    admin_login = client.post(
+        "/auth/login",
+        json={"email": "admin@test.local", "password": "SomenteParaTestes123!"},
+    )
+    assert admin_login.status_code == 200
+    assert client.post("/events", json=event()).status_code == 201
+    assert client.post("/auth/logout").status_code == 204
+    assert client.post("/auth/demo").status_code == 200
+
+    assert client.post("/events", json=dict(event(), id="blocked-event")).status_code == 403
+    assert client.delete("/events/test-event").status_code == 403
+    assert client.put(
+        "/special-dates/blocked",
+        json={
+            "name": "Teste",
+            "date": "2026-01-02",
+            "type": "Teste",
+            "scope": "Palmas",
+            "source": "teste",
+        },
+    ).status_code == 403
+    assert client.put("/favorites/cinema").status_code == 403
+    assert client.delete("/favorites/cinema").status_code == 403
+    assert client.put(
+        "/cameras/sim-cinema",
+        json={
+            "id": "sim-cinema",
+            "sector_id": "cinema",
+            "coverage": "Teste",
+        },
+    ).status_code == 403
+    assert client.put(
+        "/annotations/blocked",
+        json={"date": "2026-01-02", "minute": 900, "text": "Teste"},
+    ).status_code == 403
+    assert client.delete("/annotations/blocked").status_code == 403
+    assert client.post(
+        "/profiles",
+        json={
+            "id": "blocked-profile",
+            "date": "2026-01-02",
+            "sectors": ["cinema"],
+            "n": 10,
+            "gender": {
+                "Mulheres": 4,
+                "Homens": 3,
+                "Outra identificação": 1,
+                "Não informado": 2,
+            },
+            "age": {
+                "Crianças · 0–11": 2,
+                "Adolescentes · 12–17": 1,
+                "Adultos · 18–59": 4,
+                "Pessoas idosas · 60+": 1,
+                "Não informado": 2,
+            },
+            "source": "simulator",
+            "provenance": "Teste",
+            "from": 540,
+            "to": 1440,
+        },
+    ).status_code == 403
+
+    assert client.post("/observations", json=observation()).status_code == 401
+    assert client.post("/auth/logout").status_code == 204
+    assert client.get("/auth/me").status_code == 401
+    assert client.get("/sectors").status_code == 401
+
+
+def test_demo_only_available_in_simulator(client):
+    settings.data_mode = "video"
+    assert client.post("/auth/demo").status_code == 403
+
+
+def test_demo_preserves_origin_check(client):
+    assert (
+        client.post(
+            "/auth/demo",
+            headers={"Origin": "https://untrusted.example"},
+        ).status_code
+        == 403
+    )
 
 
 def test_expired_session(logged):

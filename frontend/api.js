@@ -2,6 +2,7 @@ const base = import.meta.env?.VITE_API_BASE || "/api";
 export let opening = 540,
   closing = 1440;
 export const cache = {
+  demo: false,
   live: null,
   history: new Map(),
   calendar: new Map(),
@@ -12,7 +13,32 @@ export const cache = {
   analysis: new Map(),
   revision: 0,
 };
+export function clearCache() {
+  cache.demo = false;
+  cache.live = null;
+  cache.history.clear();
+  cache.calendar.clear();
+  cache.profiles.clear();
+  cache.profileDates = null;
+  cache.flows.clear();
+  cache.mode = null;
+  cache.analysis.clear();
+  cache.revision++;
+}
 export async function request(path, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const route = path.split("?")[0];
+  const readOnly = ["GET", "HEAD", "OPTIONS"].includes(method);
+  const allowedDemoPost =
+    method === "POST" &&
+    ["/assistant/analyze", "/auth/logout"].includes(route);
+
+  if (cache.demo && !readOnly && !allowedDemoPost) {
+    throw new Error(
+      "Modo demonstração: alterações não permitidas.",
+    );
+  }
+
   const response = await fetch(base + path, {
     credentials: "include",
     ...options,
@@ -48,6 +74,7 @@ export function profileSamples(date, event, sector) {
 }
 export async function bootstrap(state) {
   const me = await request("/auth/me");
+  cache.demo = Boolean(me.demo);
   cache.mode = me.data_mode;
   const config = await request("/config");
   opening = config.open_minute;

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { monthCells, hasData, selectSamples, sumDimension } from "../domain.js";
 import { counts, sectors } from "../data.js";
-import { cache, request, snapshotFor } from "../api.js";
+import { bootstrap, cache, clearCache, request, snapshotFor } from "../api.js";
 
 test("Calendário segunda–domingo e anos bissextos", () => {
   for (let year = 2024; year <= 2028; year++)
@@ -100,5 +100,58 @@ test("Cliente envia cookie e propaga erro de sessão", async () => {
     );
   } finally {
     globalThis.fetch = old;
+  }
+});
+
+test("Sessão demo permite análise e logout, mas bloqueia escritas administrativas", async () => {
+  const old = globalThis.fetch;
+  let calls = 0;
+  cache.demo = true;
+  globalThis.fetch = async (url) => {
+    calls++;
+    return {
+      ok: true,
+      status: url.endsWith("/auth/logout") ? 204 : 200,
+      json: async () => ({ accepted: true }),
+    };
+  };
+  try {
+    await assert.rejects(request("/events", { method: "POST" }), /demonstração/i);
+    assert.equal(calls, 0);
+    assert.deepEqual(
+      await request("/assistant/analyze", { method: "POST", body: "{}" }),
+      { accepted: true },
+    );
+    assert.equal(await request("/auth/logout", { method: "POST" }), null);
+    assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = old;
+    clearCache();
+  }
+});
+
+test("Bootstrap restaura o tipo de sessão demo informado pela API", async () => {
+  const old = globalThis.fetch;
+  const responses = {
+    "/auth/me": { demo: true, data_mode: "simulator" },
+    "/config": { open_minute: 540, close_minute: 1440 },
+    "/sectors": [],
+    "/floors": [],
+    "/events?limit=500": [],
+    "/special-dates": [],
+    "/favorites": [],
+    "/annotations": [],
+  };
+  globalThis.fetch = async (url) => {
+    const path = url.replace("/api", "");
+    return { ok: true, status: 200, json: async () => responses[path] };
+  };
+  try {
+    await bootstrap({ minute: 1080 });
+    assert.equal(cache.demo, true);
+    assert.equal(cache.mode, "simulator");
+  } finally {
+    globalThis.fetch = old;
+    clearCache();
   }
 });

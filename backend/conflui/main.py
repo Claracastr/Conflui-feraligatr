@@ -295,10 +295,77 @@ def login(body: Login, response: Response, request: Request, session: DB):
 DUMMY_HASH = hasher.hash(secrets.token_urlsafe(32))
 
 
+@app.post("/auth/demo")
+def demo_login(
+    response: Response,
+    request: Request,
+    session: DB
+):
+    # Nunca permitir demo em ambiente de dados reais.
+    if settings.data_mode != "simulator":
+        raise HTTPException(
+            403,
+            "Demonstração disponível apenas com dados simulados"
+        )
+
+    origin = request.headers.get("origin")
+    if origin and origin not in settings.cors_origins:
+        raise HTTPException(403, "Origem não autorizada")
+
+    demo = session.get(m.Admin, "demo-viewer")
+
+    if not demo:
+        demo = m.Admin(
+            id="demo-viewer",
+            email="demo@conflui.invalid",
+            password_hash=hasher.hash(
+                secrets.token_urlsafe(48)
+            )
+        )
+        session.add(demo)
+        session.flush()
+
+    token = secrets.token_urlsafe(32)
+
+    session.add(
+        m.Session(
+            token_hash=digest(token),
+            admin_id=demo.id,
+            expires_at=m.now() + timedelta(
+                hours=settings.session_hours
+            )
+        )
+    )
+
+    session.commit()
+
+    response.set_cookie(
+        "conflui_session",
+        token,
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite="lax",
+        max_age=settings.session_hours * 3600,
+        path="/",
+    )
+
+    response.headers["Cache-Control"] = "no-store"
+
+    return {
+        "id": demo.id,
+        "email": demo.email,
+        "demo": True,
+        "data_mode": source_mode()
+    }
+
 @app.get("/auth/me")
 def me(user: User):
-    return {"id": user.id, "email": user.email, "data_mode": source_mode()}
-
+    return {
+        "id": user.id,
+        "email": user.email,
+        "demo": user.id == "demo-viewer",
+        "data_mode": source_mode(),
+    }
 
 @app.post("/auth/logout", status_code=204)
 def logout(request: Request, response: Response, user: User, session: DB):
