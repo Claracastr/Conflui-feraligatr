@@ -3,6 +3,8 @@
 O MVP usa **Python + frontend JavaScript + SQLite em arquivo**. O banco já vem com o Python: você não precisa instalar ou iniciar um servidor de banco. O design e as funcionalidades da interface foram preservados.
 Ou pelo navegador 
 **MVP:** https://conflui-feraligatr-production.up.railway.app  
+Para melhor experiência entrar com o login email:clara.castrosts@gmail.com|senha:Cc@840352170612
+
 **Código-fonte:** https://github.com/Claracastr/Conflui-feraligatr  
 **Guia de instalação:** [README_INSTRUCOES_EXECUCAO.md](README_INSTRUCOES_EXECUCAO.md)
 
