@@ -5,6 +5,9 @@ export const cache = {
   demo: false,
   live: null,
   history: new Map(),
+  historyDates: new Set(),
+  historyErrors: new Set(),
+  simulatedHistory: new Map(),
   calendar: new Map(),
   profiles: new Map(),
   profileDates: null,
@@ -17,6 +20,9 @@ export function clearCache() {
   cache.demo = false;
   cache.live = null;
   cache.history.clear();
+  cache.historyDates.clear();
+  cache.historyErrors.clear();
+  cache.simulatedHistory.clear();
   cache.calendar.clear();
   cache.profiles.clear();
   cache.profileDates = null;
@@ -194,7 +200,7 @@ export async function loadView(state) {
     ]),
   ];
   for (const date of dates)
-    if (!view.live && !cache.history.has(date + "|" + opening))
+    if (!view.live && !cache.historyDates.has(date))
       tasks.push(
         request(
           "/occupancy/timeline?date=" +
@@ -205,6 +211,8 @@ export async function loadView(state) {
             closing,
         ).then((d) => {
           for (const s of d.items) cache.history.set(date + "|" + s.minute, s);
+          cache.historyDates.add(date);
+          cache.historyErrors.delete(date);
           cache.revision++;
         }),
       );

@@ -286,6 +286,7 @@ export const days = [
   "Domingo",
 ];
 export const floors = ["Térreo", "2º pavimento · alimentação"];
+export const historyMinutes = Array.from({ length: 16 }, (_, i) => 540 + i * 60);
 export function inside(x, y, poly) {
   let yes = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -330,6 +331,47 @@ export function occupancy(
       ?.sectors.find((r) => r.sector_id === s.id)?.count ?? null
   );
 }
+
+function simulatedSnapshot(date, minute) {
+  const key = date + "|" + minute;
+  if (cache.simulatedHistory.has(key)) return cache.simulatedHistory.get(key);
+  let seed = 2166136261;
+  for (const char of key) {
+    seed ^= char.charCodeAt(0);
+    seed = Math.imul(seed, 16777619);
+  }
+  seed >>>= 0;
+  const elapsed = Math.max(0, Math.min(900, minute - 540));
+  const curve = 0.25 + 0.75 * Math.sin((Math.PI * elapsed) / 900);
+  const weekday = new Date(date + "T12:00:00Z").getUTCDay();
+  const dayFactor = 0.75 + weekday * 0.06;
+  const rows = sectors.map((sector) => {
+    const count = Math.max(1, Math.round(sector.base * curve * dayFactor));
+    const sectorSeed =
+      seed +
+      sector.id
+        .split("")
+        .reduce((sum, c) => sum + c.charCodeAt(0), 0);
+    return {
+      sector_id: sector.id,
+      count,
+      positions: Array.from(
+        { length: Math.min(count, 60) },
+        (_, i) => {
+          const [x, y] = pointIn(sector, sectorSeed + i * 2);
+          return { x, y };
+        },
+      ),
+      status: "available",
+      source: "simulator",
+      simulated: true,
+    };
+  });
+  const snapshot = { sectors: rows, source: "simulator", simulated: true };
+  cache.simulatedHistory.set(key, snapshot);
+  return snapshot;
+}
+
 export function counts(
   state,
   minute = state.minute,
@@ -337,6 +379,16 @@ export function counts(
   date = state.date,
 ) {
   let snap = snapshotFor(state, minute, date);
+  if (
+    !state.live &&
+    cache.mode === "simulator" &&
+    cache.historyDates.has(date) &&
+    !cache.historyErrors.has(date) &&
+    !snap?.sectors?.some(
+      (row) => row.count !== null && row.status !== "unavailable",
+    )
+  )
+    snap = simulatedSnapshot(date, minute);
   return sectors.map((s) => {
     let row = snap?.sectors.find((r) => r.sector_id === s.id);
     return {
@@ -346,6 +398,7 @@ export function counts(
       captured_at: row?.captured_at,
       source: row?.source,
       status: row?.status,
+      simulated: row?.simulated || false,
       unavailable: !row || row.count === null || row.status === "unavailable",
     };
   });
@@ -355,8 +408,8 @@ export function time(minute) {
     ? "00:00"
     : `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
 }
-// Média por região ao longo de todos os recortes já carregados de uma data.
-// Usa somente medições disponíveis: ausência de dado nunca vira zero.
+// Média por região nos recortes disponíveis. Simulações são preenchidas apenas
+// no modo demonstrativo quando não há medições para aquele horário.
 export function periodStats(state, date = state.date) {
   const acc = new Map(
     sectors.map((s) => [
@@ -372,7 +425,10 @@ export function periodStats(state, date = state.date) {
       },
     ]),
   );
-  for (const [key, snap] of cache.history) {
+  for (const [key, snap] of [
+    ...cache.history,
+    ...cache.simulatedHistory,
+  ]) {
     if (!key.startsWith(date + "|")) continue;
     for (const row of snap?.sectors || []) {
       const item = acc.get(row.sector_id);

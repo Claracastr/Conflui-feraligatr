@@ -29,7 +29,7 @@ import {
   days,
   floors,
   counts,
-  occupancy,
+  historyMinutes,
   time,
   concentration,
   periodStats,
@@ -189,11 +189,16 @@ async function syncView() {
     } else updateData();
   } catch (e) {
     state.stale = true;
+    if (!state.live && !cache.historyDates.has(state.date))
+      cache.historyErrors.add(state.date);
     if (e.status === 401) {
       state.session = false;
       state.login = true;
       renderContent();
-    } else toast("Atualização indisponível: " + e.message);
+    } else {
+      if (!state.live) updateData();
+      toast("Atualização indisponível: " + e.message);
+    }
   }
 }
 const optionDays = (d) =>
@@ -275,26 +280,68 @@ function statCards() {
       (s) => s.floor === state.floor && !s.unavailable,
     ),
     total = list.reduce((a, s) => a + s.count, 0),
-    before = list.reduce(
-      (a, s) =>
-        a + occupancy(s, Math.max(opening, state.minute - 60), state.day),
-      0,
-    ),
-    diff = Math.round(((total - before) / before) * 100);
-  return `<section class="metric-ribbon" aria-label="Resumo da ocupação"><span><b data-stat="total">${list.length ? total : "—"}</b> pessoas estimadas <small>no pavimento · ${list.length}/${counts(state).filter((s) => s.floor === state.floor).length} setores com medição</small></span>${state.mode === "admin" ? `<span><b data-stat="trend">${Number.isFinite(diff) && before > 0 ? (diff > 0 ? "+" : "") + diff + "%" : "—"}</b> <small>em relação a 1h antes</small></span>` : ""}<span class="ribbon-update"><i class="dot"></i> ${state.live ? (state.stale ? "Informação atrasada" : "Atualizado") : "Recorte selecionado"} <b data-stat="updated">${state.live ? state.updated.toLocaleTimeString("pt-BR", { timeZone: "America/Araguaina" }) : time(state.minute)}</b></span></section>`;
+    totalSectors = counts(state).filter((s) => s.floor === state.floor).length,
+    trend = occupancyTrend(list);
+  return `<section class="metric-ribbon" aria-label="Resumo da ocupação"><span><b data-stat="total">${list.length ? total : "—"}</b> pessoas estimadas <small data-stat="coverage">no pavimento · ${list.length}/${totalSectors} setores com medição</small></span>${state.mode === "admin" ? `<span><b data-stat="trend">${trend === null ? "—" : (trend > 0 ? "+" : "") + trend + "%"}</b> <small>em relação a 1h antes</small></span>` : ""}<span class="ribbon-update"><i class="dot"></i> ${state.live ? (state.stale ? "Informação atrasada" : "Atualizado") : "Recorte selecionado"} <b data-stat="updated">${state.live ? state.updated.toLocaleTimeString("pt-BR", { timeZone: "America/Araguaina" }) : time(state.minute)}</b></span></section>`;
+}
+
+function occupancyTrend(currentRows) {
+  const previousMinute = state.minute - 60;
+  if (state.live || previousMinute < opening) return null;
+  const previousRows = counts(state, previousMinute).filter(
+    (s) => s.floor === state.floor && !s.unavailable,
+  );
+  const currentById = new Map(currentRows.map((s) => [s.id, s]));
+  const comparable = previousRows.filter((s) => currentById.has(s.id));
+  const before = comparable.reduce((sum, s) => sum + s.count, 0);
+  if (!comparable.length || before === 0) return null;
+  const now = comparable.reduce(
+    (sum, s) => sum + currentById.get(s.id).count,
+    0,
+  );
+  return Math.round(((now - before) / before) * 100);
+}
+
+function nearestHistoryMinute(minute) {
+  return historyMinutes.reduce((nearest, candidate) =>
+    Math.abs(candidate - minute) < Math.abs(nearest - minute)
+      ? candidate
+      : nearest,
+  );
 }
 
 function mapPanel() {
   let snap = state.live
       ? cache.live
       : cache.history.get(state.date + "|" + state.minute),
+    historyError = cache.historyErrors.has(state.date),
+    historyLoading =
+      !state.live &&
+      !cache.historyDates.has(state.date) &&
+      !historyError,
     noFloor =
-      !!snap &&
+      !state.live &&
+      !historyLoading &&
+      !historyError &&
       !counts(state).some((s) => s.floor === state.floor && !s.unavailable);
-  return `<section class="panel map-panel"><div class="panel-head"><div><h2>${floors[state.floor]}</h2><p>${state.selected ? "Região selecionada · contexto preservado" : "Visão geral · todos os setores do pavimento"}</p></div><span class="badge ${state.stale ? "stale" : ""}" data-livebadge><span class="dot"></span>${state.live ? (state.stale ? "Atualização atrasada" : "Ao vivo · API") : time(state.minute) + " · Histórico"}</span></div><div class="filters"><div class="segmented" aria-label="Pavimento"><button data-floor="0" class="${state.floor === 0 ? "active" : ""}">Térreo</button><button data-floor="1" class="${state.floor === 1 ? "active" : ""}">2º pavimento</button></div><button class="btn" data-overview>Visão geral</button><button class="btn" id="browse-sectors">⌕ Buscar setor</button></div>${noFloor ? `<div class="map-empty"><b>Sem medições neste recorte.</b><span>Nenhum setor deste pavimento tem amostra em ${labelDate(state.date)} às ${time(state.minute)}. O mapa não desenha calor sem medição — escolha outro horário ou consulte o histórico.</span>${state.page === "history" ? "" : `<button class="btn" data-nav="history">Abrir histórico</button>`}</div>` : ""}${mapMarkup(state, { flow: false })}<div class="maplegend"><div class="flex items-center gap-2"><span>Menor</span><span class="heatgradient"></span><span>Maior concentração</span></div><label class="flex items-center gap-2"><span class="opacitylabel">Transparência</span><input class="range" aria-label="Intensidade da camada de calor" type="range" min="10" max="95" value="${state.opacity}" id="opacity"></label></div>${state.mode === "admin" && state.page === "history" ? timeline() + eventPanel() : ""}<div class="scope-note">Os números representam ocupação estimada. As delimitações são propostas de análise baseadas na planta, sem cobertura real de câmeras.</div></section>`;
+  return `<section class="panel map-panel"><div class="panel-head"><div><h2>${floors[state.floor]}</h2><p>${state.selected ? "Região selecionada · contexto preservado" : "Visão geral · todos os setores do pavimento"}</p></div><span class="badge ${state.stale ? "stale" : ""}" data-livebadge><span class="dot"></span>${state.live ? (state.stale ? "Atualização atrasada" : "Ao vivo · API") : time(state.minute) + " · Histórico"}</span></div><div class="filters"><div class="segmented" aria-label="Pavimento"><button data-floor="0" class="${state.floor === 0 ? "active" : ""}">Térreo</button><button data-floor="1" class="${state.floor === 1 ? "active" : ""}">2º pavimento</button></div><button class="btn" data-overview>Visão geral</button><button class="btn" id="browse-sectors">⌕ Buscar setor</button></div><div class="map-empty" data-map-state ${historyLoading || historyError || noFloor ? "" : "hidden"}><b>${historyLoading ? "Consultando histórico…" : historyError ? "Histórico indisponível." : "Sem medições neste recorte."}</b><span>${historyLoading ? "Carregando os registros históricos desta data." : historyError ? "Não foi possível consultar a API. Tente novamente antes de interpretar este recorte." : `Nenhum setor deste pavimento tem amostra em ${labelDate(state.date)} às ${time(state.minute)}. O mapa não desenha calor sem medição — escolha outro horário ou consulte o histórico.`}</span><button class="btn" data-retry-history ${historyError ? "" : "hidden"}>Tentar novamente</button>${!historyLoading && !historyError && state.page !== "history" ? `<button class="btn" data-nav="history">Abrir histórico</button>` : ""}</div>${mapMarkup(state, { flow: false })}<div class="maplegend"><div class="flex items-center gap-2"><span>Menor</span><span class="heatgradient"></span><span>Maior concentração</span></div><label class="flex items-center gap-2"><span class="opacitylabel">Transparência</span><input class="range" aria-label="Intensidade da camada de calor" type="range" min="10" max="95" value="${state.opacity}" id="opacity"></label></div>${state.page === "history" ? timeline() + eventPanel() : ""}<div class="scope-note">Os números representam ocupação estimada. As delimitações são propostas de análise baseadas na planta, sem cobertura real de câmeras.</div></section>`;
 }
 function timeline() {
-  return `<div class="timeline">${miniChart()}<div class="flex items-center justify-between gap-2"><span class="time-title">${days[state.day]} · <span data-time>${time(state.minute)}</span></span><button class="btn" id="play">${state.playing ? "Ⅱ Pausar" : "▷ Reproduzir"}</button></div><input type="range" min="${opening}" max="${closing}" step="15" value="${state.minute}" aria-label="Horário global de todos os setores" id="timeline"><div class="timeline-times"><span>09h</span><span>12h</span><span>15h</span><span>18h</span><span>21h</span><span>00h</span></div></div>`;
+  const selectedMinute = nearestHistoryMinute(state.minute);
+  return `<div class="timeline"><div class="timeline-heading"><span class="time-title">${days[state.day]} · <strong data-time>${time(selectedMinute)}</strong></span><span class="badge demo timeline-source">${cache.mode === "simulator" ? "Histórico simulado · não é tempo real" : "Registros históricos · não é tempo real"}</span><button class="btn" id="play">${state.playing ? "Ⅱ Pausar" : "▷ Reproduzir"}</button></div>${miniChart()}<input type="range" min="${historyMinutes[0]}" max="${historyMinutes[historyMinutes.length - 1]}" step="60" value="${selectedMinute}" aria-label="Horário global de todos os setores" aria-valuetext="${time(selectedMinute)}" id="timeline"><div class="timeline-times">${[
+    [0, "09h"],
+    [3, "12h"],
+    [6, "15h"],
+    [9, "18h"],
+    [12, "21h"],
+    [14, "23h"],
+    [15, "00h"],
+  ]
+    .map(
+      ([index, label]) =>
+        `<span style="grid-column:${index + 1}">${label}</span>`,
+    )
+    .join("")}</div></div>`;
 }
 function sectorList() {
   let list = sectors.filter(
@@ -637,6 +684,14 @@ function renderDetail() {
     slot.innerHTML = state.selected ? detailMarkup() : "";
     bindDetail();
     bindFavorite();
+    let retryHistory = document.querySelector("[data-retry-history]");
+    if (retryHistory)
+      retryHistory.onclick = () => {
+        cache.historyDates.delete(state.date);
+        cache.historyErrors.delete(state.date);
+        loadingKey = "";
+        updateData();
+      };
   }
 }
 function bindDetail() {
@@ -670,6 +725,7 @@ function changePage(page) {
   state.playing = false;
   state.page = page;
   state.live = page === "map";
+  if (page === "history") state.minute = nearestHistoryMinute(state.minute);
   state.selected = null;
   state.query = "";
   state.browse = false;
@@ -852,14 +908,9 @@ function bind() {
   let timelineEl = document.querySelector("#timeline");
   if (timelineEl)
     timelineEl.oninput = () => {
-      state.minute = +timelineEl.value;
+      state.minute = nearestHistoryMinute(+timelineEl.value);
       updateData();
       refreshEventHighlight();
-      document
-        .querySelectorAll("[data-time]")
-        .forEach((e) => (e.textContent = time(state.minute)));
-      document.querySelector("[data-livebadge]").textContent =
-        time(state.minute) + " · Histórico";
     };
   let play = document.querySelector("#play");
   if (play)
@@ -875,16 +926,9 @@ function bind() {
             document.querySelector("#play").textContent = "▷ Reproduzir";
             return;
           }
-          state.minute += 15;
+          state.minute += 60;
           updateData();
           refreshEventHighlight();
-          let t = document.querySelector("#timeline");
-          if (t) t.value = state.minute;
-          document
-            .querySelectorAll("[data-time]")
-            .forEach((e) => (e.textContent = time(state.minute)));
-          let badge = document.querySelector("[data-livebadge]");
-          if (badge) badge.textContent = time(state.minute) + " · Histórico";
         }, 900);
     };
   document.querySelectorAll("[data-week]").forEach(
@@ -1015,6 +1059,14 @@ function updateData() {
     total.textContent = floorlist.length
       ? floorlist.reduce((a, s) => a + s.count, 0)
       : "—";
+  let coverage = document.querySelector('[data-stat="coverage"]');
+  if (coverage)
+    coverage.textContent =
+      "no pavimento · " +
+      floorlist.length +
+      "/" +
+      list.filter((s) => s.floor === state.floor).length +
+      " setores com medição";
   let upd = document.querySelector('[data-stat="updated"]');
   if (upd)
     upd.textContent = state.live
@@ -1031,16 +1083,64 @@ function updateData() {
   }
   let trend = document.querySelector('[data-stat="trend"]');
   if (trend) {
-    let before = floorlist.reduce(
-        (a, s) =>
-          a + occupancy(s, Math.max(opening, state.minute - 60), state.day),
-        0,
-      ),
-      now = floorlist.reduce((a, s) => a + s.count, 0),
-      d = Math.round(((now - before) / before) * 100);
+    let d = occupancyTrend(floorlist);
     trend.textContent =
-      before > 0 && Number.isFinite(d) ? (d > 0 ? "+" : "") + d + "%" : "—";
+      d !== null && Number.isFinite(d) ? (d > 0 ? "+" : "") + d + "%" : "—";
   }
+  let selectedMinute = nearestHistoryMinute(state.minute);
+  let timeline = document.querySelector("#timeline");
+  if (timeline) {
+    timeline.value = selectedMinute;
+    timeline.setAttribute("aria-valuetext", time(selectedMinute));
+  }
+  document
+    .querySelectorAll("[data-time]")
+    .forEach((el) => (el.textContent = time(selectedMinute)));
+  document
+    .querySelectorAll("[data-chart-minute]")
+    .forEach((el) => {
+      const minute = Number(el.dataset.chartMinute);
+      const rows = counts(state, minute).filter(
+        (s) => s.floor === state.floor && !s.unavailable,
+      );
+      const total = rows.reduce((sum, s) => sum + s.count, 0);
+      el.style.height = `${Math.max(8, (total / 900) * 100)}%`;
+      el.setAttribute(
+        "aria-label",
+        rows.length
+          ? `Consultar ${time(minute)}: ${total} pessoas estimadas`
+          : `Consultar ${time(minute)}: sem medições disponíveis`,
+      );
+      el.classList.toggle("active", minute === selectedMinute);
+      el.setAttribute("aria-pressed", String(minute === selectedMinute));
+    });
+  let mapState = document.querySelector("[data-map-state]");
+  if (mapState) {
+    const historyError = cache.historyErrors.has(state.date);
+    const loading =
+      !state.live &&
+      !historyError &&
+      !cache.historyDates.has(state.date);
+    const hasFloorMeasurements = floorlist.length > 0;
+    mapState.hidden =
+      !loading &&
+      !historyError &&
+      (state.live || hasFloorMeasurements);
+    mapState.querySelector("b").textContent = loading
+      ? "Consultando histórico…"
+      : historyError
+        ? "Histórico indisponível."
+        : "Sem medições neste recorte.";
+    mapState.querySelector("span").textContent = loading
+      ? "Carregando os registros históricos desta data."
+      : historyError
+        ? "Não foi possível consultar a API. Tente novamente antes de interpretar este recorte."
+        : `Nenhum setor deste pavimento tem amostra em ${labelDate(state.date)} às ${time(selectedMinute)}. O mapa não desenha calor sem medição — escolha outro horário ou consulte o histórico.`;
+    mapState.querySelector("[data-retry-history]").hidden = !historyError;
+  }
+  let badge = document.querySelector("[data-livebadge]");
+  if (badge && !state.live)
+    badge.textContent = time(selectedMinute) + " · Histórico";
   let slot = document.querySelector("#insights-slot");
   if (slot) {
     slot.innerHTML = insights();
@@ -1053,13 +1153,15 @@ function updateData() {
 
 function miniChart() {
   return `<div class="mini-timeline-chart">${Array.from(
-    { length: Math.floor((closing - opening) / 15) + 1 },
+    { length: historyMinutes.length },
     (_, i) => {
-      let minute = opening + i * 15,
-        v = counts(state, minute, state.day)
-          .filter((s) => s.floor === state.floor && !s.unavailable)
-          .reduce((a, s) => a + s.count, 0);
-      return `<button type="button" data-chart-minute="${minute}" style="height:${Math.max(8, (v / 900) * 100)}%" aria-label="Consultar ${time(minute)}: ${v} pessoas estimadas"></button>`;
+      let minute = historyMinutes[i],
+        rows = counts(state, minute, state.day).filter(
+          (s) => s.floor === state.floor && !s.unavailable,
+        ),
+        total = rows.reduce((sum, s) => sum + s.count, 0),
+        selectedMinute = nearestHistoryMinute(state.minute);
+      return `<button type="button" data-chart-minute="${minute}" class="${minute === selectedMinute ? "active" : ""} ${rows.length ? "" : "unavailable"}" aria-pressed="${minute === selectedMinute}" style="height:${Math.max(8, (total / 900) * 100)}%" aria-label="Consultar ${time(minute)}: ${rows.length ? total + " pessoas estimadas" : "sem medições disponíveis"}"></button>`;
     },
   ).join("")}</div>`;
 }
@@ -1294,15 +1396,9 @@ function bindExtra() {
   document.querySelectorAll("[data-chart-minute]").forEach(
     (b) =>
       (b.onclick = () => {
-        state.minute = +b.dataset.chartMinute;
+        state.minute = nearestHistoryMinute(+b.dataset.chartMinute);
         updateData();
         refreshEventHighlight();
-        document.querySelector("#timeline").value = state.minute;
-        document
-          .querySelectorAll("[data-time]")
-          .forEach((e) => (e.textContent = time(state.minute)));
-        document.querySelector("[data-livebadge]").textContent =
-          time(state.minute) + " · Histórico";
       }),
   );
   document.querySelectorAll("[data-event-id]").forEach(
@@ -1310,6 +1406,8 @@ function bindExtra() {
       (b.onclick = () => {
         let e = state.events.find((x) => x.id === b.dataset.eventId);
         state.minute = e.minute;
+        if (state.page === "history")
+          state.minute = nearestHistoryMinute(state.minute);
         if (e.sector) {
           state.selected = e.sector;
           state.floor = sectors.find((s) => s.id === e.sector).floor;

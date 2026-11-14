@@ -1,8 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { monthCells, hasData, selectSamples, sumDimension } from "../domain.js";
-import { counts, sectors } from "../data.js";
-import { bootstrap, cache, clearCache, request, snapshotFor } from "../api.js";
+import {
+  counts,
+  historyMinutes,
+  periodStats,
+  sectors,
+  time,
+} from "../data.js";
+import {
+  bootstrap,
+  cache,
+  clearCache,
+  loadView,
+  request,
+  snapshotFor,
+} from "../api.js";
 
 test("Calendário segunda–domingo e anos bissextos", () => {
   for (let year = 2024; year <= 2028; year++)
@@ -26,6 +39,95 @@ test("Ausência não vira ocupação zero e não cria posições", () => {
       (r) => r.unavailable && r.count === null && r.positions.length === 0,
     ),
   );
+});
+test("Linha do tempo seleciona horas de 09:00 até a meia-noite seguinte", () => {
+  assert.equal(historyMinutes.length, 16);
+  assert.equal(historyMinutes[0], 540);
+  assert.equal(historyMinutes[3], 720);
+  assert.equal(historyMinutes[9], 1080);
+  assert.equal(historyMinutes[14], 1380);
+  assert.equal(historyMinutes[15], 1440);
+  assert.deepEqual(
+    [0, 3, 9, 14, 15].map((index) => time(historyMinutes[index])),
+    ["09:00", "12:00", "18:00", "23:00", "00:00"],
+  );
+  assert(
+    historyMinutes.every(
+      (minute, index) => !index || minute - historyMinutes[index - 1] === 60,
+    ),
+  );
+});
+test("Histórico sem registros fica marcado como carregado e não é buscado repetidamente", async () => {
+  const old = globalThis.fetch;
+  let timelineCalls = 0;
+  globalThis.fetch = async (url) => {
+    if (url.includes("/occupancy/timeline")) {
+      timelineCalls++;
+      return { ok: true, status: 200, json: async () => ({ items: [] }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ days: [] }) };
+  };
+  const state = {
+    date: "2026-01-02",
+    compareDate: "2026-01-01",
+    minute: 540,
+    live: false,
+    page: "history",
+    calYear: 2026,
+    calMonth: 0,
+  };
+  try {
+    await loadView(state);
+    await loadView(state);
+    assert.equal(timelineCalls, 1);
+    assert.equal(cache.historyDates.has(state.date), true);
+  } finally {
+    globalThis.fetch = old;
+    clearCache();
+  }
+});
+test("Histórico demonstrativo sem registros é determinístico e exclusivo do simulador", () => {
+  clearCache();
+  cache.mode = "simulator";
+  const state = {
+    live: false,
+    date: "2026-11-14",
+    minute: 540,
+    day: 5,
+  };
+  assert(counts(state).every((row) => row.unavailable));
+  cache.historyDates.add(state.date);
+  const first = counts(state);
+  const later = counts({ ...state, minute: 1080 });
+  const again = counts(state);
+  assert(first.every((row) => row.simulated && row.count > 0));
+  assert.deepEqual(
+    first.map((row) => [row.count, row.positions]),
+    again.map((row) => [row.count, row.positions]),
+  );
+  assert.notDeepEqual(
+    first.map((row) => row.count),
+    later.map((row) => row.count),
+  );
+  assert(periodStats(state).some((row) => row.available));
+  cache.history.set(state.date + "|540", {
+    sectors: [
+      {
+        sector_id: sectors[0].id,
+        count: 999,
+        status: "available",
+        source: "simulator",
+        positions: [],
+      },
+    ],
+  });
+  const recorded = counts(state);
+  assert.equal(recorded[0].count, 999);
+  assert(recorded.slice(1).every((row) => row.unavailable));
+  cache.history.delete(state.date + "|540");
+  cache.mode = "video";
+  assert(counts(state).every((row) => row.unavailable));
+  clearCache();
 });
 test("Todos os setores usam o mesmo instante, preservado ao trocar pavimento", () => {
   let state = {
