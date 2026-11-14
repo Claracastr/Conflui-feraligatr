@@ -1,51 +1,91 @@
-# Rodar o Conflui no Windows e VS Code
+# Conflui — Instruções de instalação e execução
 
-O MVP usa **Python + frontend JavaScript + SQLite em arquivo**. O banco já vem com o Python: você não precisa instalar ou iniciar um servidor de banco. O design e as funcionalidades da interface foram preservados.
+> Guia de reprodução do MVP em **Windows com VS Code**, utilizando **Python, Node.js e SQLite**. Os comandos estão escritos para o terminal **Prompt de Comando (CMD)**, não PowerShell.
 
-## 1. Preparação
+**MVP publicado:** https://conflui-feraligatr-production.up.railway.app  
+**Repositório:** https://github.com/Claracastr/Conflui-feraligatr  
+**Arquitetura:** [README_DOCUMENTACAO_TECNICA.md](README_DOCUMENTACAO_TECNICA.md)
 
-Instale Python **3.12**, Node.js **22** e VS Code. Extraia o ZIP atualizado e abra no VS Code a pasta `Conflui`, que contém `configurar.py`, `iniciar.py`, `backend` e `frontend`.
+## 1. Pré-requisitos
 
-No VS Code, abra **Terminal → Novo terminal**. Use **Command Prompt / Prompt de Comando** na setinha ao lado do `+`. Os comandos abaixo são para esse terminal, começando na **pasta principal do projeto**.
+Instale:
 
-## 2. Configurar o backend — só na primeira vez
+- **Git**, para obter o repositório;
+- **Python 3.12**, com `py` disponível no terminal;
+- **Node.js 22** e **npm**;
+- **VS Code** (recomendado), ou outro editor.
 
-Execute um comando por vez:
+O banco é um arquivo **SQLite**: não é necessário instalar MySQL, PostgreSQL ou outro servidor de banco para reproduzir a demonstração local.
+
+Verifique as ferramentas no CMD:
+
+```bat
+git --version
+py -3.12 --version
+node --version
+npm --version
+```
+
+## 2. Baixar o código
+
+No terminal:
+
+```bat
+git clone https://github.com/Claracastr/Conflui-feraligatr.git
+cd Conflui-feraligatr
+```
+
+Abra essa pasta no VS Code. Os comandos seguintes partem da **raiz do projeto**, que contém `configurar.py`, `iniciar.py`, `backend/` e `frontend/`.
+
+## 3. Preparar o backend — primeira execução
+
+Crie o ambiente virtual, ative-o e instale as dependências:
 
 ```bat
 py -3.12 -m venv .venv
 .venv\Scripts\activate.bat
 python -m pip install -r backend\requirements.txt
+```
+
+Em seguida, execute o configurador incluído no projeto:
+
+```bat
 python configurar.py
 ```
 
-O último comando:
+O configurador foi desenvolvido para:
 
-- Cria o `.env` e gera a chave interna do simulador automaticamente.
-- Cria o arquivo de banco `conflui.db` na raiz e aplica as migrations.
-- Cadastra os pavimentos e as regiões da planta.
-- Preenche três dias de histórico sintético para testar o calendário.
-- Pede seu e-mail e a senha para criar o administrador, se não houver um.
+1. Criar/ajustar o arquivo `.env` a partir da configuração local.
+2. Gerar uma chave interna de ingestão quando ainda não existir.
+3. Aplicar as **migrações Alembic** ao SQLite local.
+4. Cadastrar o catálogo dos pavimentos e regiões.
+5. Inserir histórico sintético inicial para a demonstração.
+6. Solicitar e-mail e senha para a conta administrativa, quando necessária.
 
-A senha precisa ter pelo menos 12 caracteres. **Ela não aparece enquanto você digita**, o que é normal. Não existe senha padrão.
+A senha administrativa deve ter **pelo menos 12 caracteres**. Não existe senha padrão. O banco e os dados existentes são preservados em novas execuções normais do configurador.
 
-Executar `configurar.py` novamente preserva a conta e os registros existentes; ele não apaga o banco. Se você copiou um `.env` da versão anterior com outro banco, o script atualiza a configuração para SQLite. Ele não acessa nem migra os dados daquele banco externo.
+> **Segurança:** nunca envie `.env`, chaves, senhas ou arquivos `.db` para o GitHub. Para um teste local, utilize exclusivamente valores e bancos locais, sem apontar para produção.
 
-## 3. Iniciar o backend
+## 4. Iniciar a API e o simulador
 
-No mesmo terminal, ainda na **pasta principal** e com `(.venv)` ativo:
+No **terminal 1**, na raiz do projeto e com `(.venv)` ativo:
 
 ```bat
 python iniciar.py
 ```
 
-Deixe esse terminal aberto. O comando inicia a API e, no ambiente simulado, o simulador em processos separados. Você não precisa de outro terminal para o simulador.
+Esse launcher inicia a **API FastAPI** e, quando `DATA_MODE=simulator`, o processo responsável por alimentar as medições sintéticas. **Deixe o terminal aberto.**
 
-Confira http://127.0.0.1:8000/health — deve responder com `status: ok` e `data_mode: simulator`.
+Abra no navegador:
 
-## 4. Iniciar a interface
+- **Saúde da API:** http://127.0.0.1:8000/health
+- **Documentação interativa:** http://127.0.0.1:8000/docs
 
-Abra um **segundo terminal** na pasta principal:
+A rota de saúde deve retornar um status de sucesso, incluindo a identificação do modo de dados.
+
+## 5. Iniciar o frontend
+
+Abra o **terminal 2**, também na raiz do projeto:
 
 ```bat
 cd frontend
@@ -53,95 +93,132 @@ npm ci
 npm run dev
 ```
 
-Abra **http://localhost:5173** e entre com a conta criada no passo 2.
+Acesse: **http://localhost:5173**.
 
-O `npm ci` só precisa ser repetido na primeira execução ou quando mudar o arquivo de dependências. O frontend encaminha as consultas `/api/` para a API local na porta 8000.
+O Vite encaminha as chamadas `/api` à API local na porta `8000`. Se o frontend abrir, mas exibir erro de API, confira primeiro se o terminal 1 continua em execução e se o proxy do Vite aponta para a porta correta.
 
-## 5. Conferir se funcionou
+## 6. Verificar o MVP
 
-- O primeiro terminal mostra o envio de medições dos 18 setores.
-- O mapa recebe contagens e posições da API; o cabeçalho identifica os dados simulados.
-- Abra a busca e digite enquanto chegam atualizações: o foco deve permanecer.
-- No histórico, escolha hoje, ontem ou anteontem, que foram preenchidos na configuração.
-- Troque o pavimento mantendo a data e o horário selecionados.
-- Cadastre um evento, favorite um setor e atualize a página para conferir a persistência.
-- Consulte o perfil do público: ele usa uma amostra sintética independente da ocupação. Um evento recém-criado pode não ter pesquisa e retornar indisponibilidade.
+Faça este percurso de conferência:
 
-Os números do simulador não representam câmeras conectadas. Uma data sem registros não é preenchida com zero.
+1. Abra a tela de login e use **Explorar demonstração**, se disponível na versão clonada.
+2. Verifique o **mapa de calor**, os pavimentos e os setores.
+3. Abra **Calendário e Histórico**, selecione uma data com registros e mova o controle entre **09h e 00h**.
+4. Consulte **eventos**, **relatórios** e o **perfil do público**.
+5. Faça uma consulta suportada pelo **assistente inteligente** e confira a resposta.
+6. Entre com a conta **administrativa** criada na configuração e teste uma operação de escrita permitida; recarregue a página para verificar a persistência.
+7. Na sessão demonstrativa, confirme que ações administrativas de escrita continuam bloqueadas.
 
-## 6. Encerrar e abrir novamente
+**Nota:** os números exibidos no modo `simulator` são sintéticos. Para verificar uma câmera real, utilize o procedimento opcional indicado na seção 9.
 
-Pressione **Ctrl+C** em cada um dos dois terminais. No terminal do backend, esse comando encerra também o simulador. O arquivo `conflui.db` mantém os registros.
+## 7. Parar e reiniciar
 
-Na próxima vez, **Terminal 1 — raiz**:
+Para encerrar, pressione **Ctrl + C** nos terminais do frontend e backend.
+
+Nas próximas execuções, **não recrie o banco nem o usuário**. Na raiz:
+
+**Terminal 1:**
 
 ```bat
 .venv\Scripts\activate.bat
 python iniciar.py
 ```
 
-**Terminal 2 — raiz**:
+**Terminal 2:**
 
 ```bat
 cd frontend
 npm run dev
 ```
 
-Não precisa recriar o banco ou o administrador.
+O SQLite mantém os registros após encerrar a aplicação.
 
-## Testes e Postman
+## 8. Testes e build
 
-**Raiz, ambiente Python ativo:**
+Com as dependências instaladas:
+
+**Backend — execute na raiz:**
 
 ```bat
 cd backend
 python -m pytest -q
+cd ..
 ```
 
-A suíte usa arquivos SQLite temporários próprios e não altera seu banco da aplicação.
-
-**Dentro de `frontend`:**
+**Frontend — execute na raiz:**
 
 ```bat
+cd frontend
 npm test
 npm run build
+cd ..
 ```
 
-No Postman, importe os dois JSONs da pasta `postman`, selecione o ambiente local e preencha e-mail/senha. Para testar aquisição manualmente, copie `INGEST_KEY` do `.env` para o campo local do ambiente Postman. Não envie esses valores ao GitHub. Execute Saúde → Login → Administrador atual, e depois as consultas. O cookie é preservado pelo Postman.
+Esses comandos verificam, respectivamente, testes Python, testes JavaScript e compilação do frontend. Os testes de backend usam bases temporárias próprias e não devem alterar o banco principal.
 
-## Vídeo, somente quando a equipe estiver pronta
+Para detalhes sobre cobertura e limitações da validação, consulte `docs/VALIDACAO.md` no repositório.
 
-O detector continua opcional e não é instalado para executar o MVP. Ele depende de vídeo, pesos pré-treinados e validação no equipamento. Para o piloto, use um arquivo separado de banco, configure `DATA_MODE=video` no `.env`, execute `python configurar.py` e registre a câmera pela API conforme [CONTRATOS.md](CONTRATOS.md). No modo de vídeo, `iniciar.py` não inicia o simulador.
+## 9. Execução opcional com vídeo/câmera
 
-Para instalar o detector, na raiz com o ambiente ativo:
+**Não é necessária para rodar o MVP demonstrativo.** A prova de conceito com vídeo deve ser preparada em **outro banco** e com o modo `DATA_MODE=video`, evitando misturar dados reais e simulados.
+
+Pré-requisitos adicionais:
+
+- Dependências opcionais do processador de vídeo;
+- câmera cadastrada na API;
+- fonte de vídeo acessível;
+- calibração espacial validada, caso seja necessário gerar calor por posição.
+
+Instale as dependências opcionais a partir da raiz:
 
 ```bat
 python -m pip install -r backend\requirements-video.txt
 ```
 
-Com a API aberta, em outro terminal dentro de `backend`:
+Depois de configurar um ambiente de vídeo separado e iniciar a API, um exemplo de execução do processador, **a partir da pasta `backend`**, é:
 
 ```bat
 python -m conflui.video --input "C:\videos\teste.mp4" --camera camera-cinema --sector cinema
 ```
 
-A câmera precisa ter sido cadastrada. Sem calibração, o processador envia somente contagem, sem inventar calor sobre a planta. A API de câmeras da equipe ainda precisa ser disponibilizada para um adaptador específico.
+Os identificadores do exemplo precisam existir na configuração. A descrição completa do contrato de câmera, ingestão e calibração está em `docs/CONTRATOS.md`. **Não trate uma demonstração de vídeo como validação de precisão em ambiente real.**
 
-## Erros mais comuns
+## 10. Implantação pública
 
-| Erro | Como resolver |
+A publicação de referência utiliza **Docker e Railway**. Para reproduzir a hospedagem, consulte `Dockerfile`, `deploy.py` e `GUIA-HOSPEDAGEM.md` na raiz do repositório.
+
+Antes da avaliação, confirme que:
+
+- o serviço do Railway está **Online**;
+- o domínio público abre em uma janela anônima;
+- a sessão de demonstração acessa os módulos previstos;
+- as credenciais e as chaves ficam em variáveis de ambiente;
+- o banco persistente não é substituído por um SQLite local de teste.
+
+## 11. Problemas frequentes
+
+| Sintoma | Verificação ou solução |
 | --- | --- |
-| `py` ou `node` não reconhecido | Confira a instalação no PATH e reabra o VS Code. |
-| PowerShell bloqueia a ativação | Use o terminal Command Prompt indicado acima, sem alterar políticas do computador. |
-| Não encontra `configurar.py` | O terminal precisa estar na pasta principal, que contém esse arquivo. |
-| `ModuleNotFoundError` | Ative `.venv` e instale `backend\requirements.txt`. |
-| Banco ainda não configurado | Rode `python configurar.py` na raiz. |
-| A API não responde | Confira as mensagens no primeiro terminal e se a porta 8000 está livre. |
-| Login retorna 401 | Use o e-mail e a senha criados na configuração, no mesmo arquivo de banco. |
-| Sem registros no histórico | Escolha um dos três dias preenchidos ou gere outro período com `python -m conflui.cli seed-history`, dentro de `backend`. |
-| Banco bloqueado | Encerre instâncias duplicadas e ferramentas externas que estejam mantendo uma transação aberta. Não execute a configuração durante a apresentação. |
-| `.env` ainda aponta para o banco anterior | Encerre a API, execute `python configurar.py` e inicie novamente. |
+| `py` não é reconhecido | Instale Python 3.12 e confira o PATH. |
+| O terminal não ativa `.venv` | Abra um terminal **CMD** e use `.venv\Scripts\activate.bat`. |
+| `ModuleNotFoundError` | Verifique a ativação do ambiente e reinstale `backend\requirements.txt`. |
+| `no such table: admins` ou `sessions` | Pare o backend e execute `python configurar.py` **na raiz**, com o banco local correto. |
+| `alembic` procura `migrations` no lugar errado | Prefira `python configurar.py`, que informa explicitamente a localização das migrações. |
+| API indisponível | Verifique `http://127.0.0.1:8000/health` e o terminal da API. |
+| Vite abre, mas não encontra a API | Confirme o proxy `/api` e a porta `8000`. |
+| Não há dados no histórico | Selecione um dos dias semeados no setup; datas sem registro podem aparecer indisponíveis. |
+| Login falha | Use o administrador criado no **mesmo banco** durante a configuração. |
+| Build falha | Execute `npm ci` na pasta `frontend` e repita `npm run build`. |
 
-Para copiar o banco como backup, primeiro encerre o backend. Depois copie `conflui.db`. Não apague esse arquivo para simplesmente encerrar o sistema.
+## 12. Referências
 
-O site anteriormente publicado continua como referência visual. Esta versão integrada é executada localmente; os arquivos não foram enviados automaticamente ao GitHub.
+- [`README.md`](https://github.com/Claracastr/Conflui-feraligatr) — apresentação geral do projeto.
+- [`docs/EXECUCAO.md`](https://github.com/Claracastr/Conflui-feraligatr/blob/main/docs/EXECUCAO.md) — documentação operacional do repositório.
+- [`docs/CONTRATOS.md`](https://github.com/Claracastr/Conflui-feraligatr/blob/main/docs/CONTRATOS.md) — especificações da API.
+- [`docs/VALIDACAO.md`](https://github.com/Claracastr/Conflui-feraligatr/blob/main/docs/VALIDACAO.md) — testes e limites da validação.
+- [`postman/`](https://github.com/Claracastr/Conflui-feraligatr/tree/main/postman) — coleção e ambiente para consultas à API.
+
+---
+
+**Conflui — HackaRun**  
+O procedimento acima documenta a execução reproduzível do MVP. Caso a branch publicada tenha mudanças posteriores, os comandos e as rotas devem ser conferidos contra essa versão antes da entrega oficial.
