@@ -71,7 +71,7 @@ def main():
             raise RuntimeError("API não ficou saudável após 60s")
         if os.environ.get("DATA_MODE", "simulator") == "simulator":
             simulator = subprocess.Popen([
-                sys.executable, "-m", "conflui.simulator", "--url", url,
+                sys.executable, "-m", "conflui.simulator", "--url", url + "/api",
             ], cwd=ROOT / "backend")
         print("Conflui online em /, API em /api/health", flush=True)
         while api.poll() is None and (simulator is None or simulator.poll() is None):
