@@ -1,0 +1,73 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ThermoCount IA</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0b0d10;color:#e6ebf1;font:14px system-ui,sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 12px}h1 b{color:#2f81f7}.g{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.c{background:#14181d;border:1px solid #262d36;border-radius:12px;padding:12px}h3{margin:0 0 8px;font-size:12px;color:#8a96a5;text-transform:uppercase}
+.v{position:relative;aspect-ratio:4/3;background:#000;border-radius:8px;overflow:hidden}.v video,.v canvas{position:absolute;inset:0;width:100%;height:100%}
+#hm{width:100%;aspect-ratio:4/3;background:#000;border-radius:8px;display:block}
+.tb{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}button,select{background:#2f81f7;color:#fff;border:0;border-radius:8px;padding:10px 14px;font:inherit;cursor:pointer}button.o,select{background:#1b2027;border:1px solid #262d36;color:#e6ebf1}button:disabled{opacity:.5}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:12px}.k div{background:#14181d;border:1px solid #262d36;border-radius:10px;padding:10px}
+.k small{color:#8a96a5;display:block}.k b{font-size:26px}.m{color:#00e5ff}.f{color:#ff00c8}.s{color:#8a96a5;font-size:12px;margin-top:8px}#er{color:#ffd866;margin-bottom:10px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}.bar{height:8px;border-radius:4px;background:linear-gradient(90deg,hsl(240,100%,25%),hsl(120,100%,35%),hsl(60,100%,45%),hsl(0,100%,50%))}
+</style></head><body>
+<h1>Thermo<b>Count</b> IA · <span id="st"><span class="dot" style="background:#d9a520"></span>carregando modelos de IA…</span></h1>
+<div class="tb"><button id="go" disabled>▶ Abrir câmera</button><select id="dv"></select><button class="o" id="stop">■ Parar</button>
+<label><input type="checkbox" id="gd" checked> Estimar sexo aparente (opcional)</label><select id="ql"><option value="320">Qualidade: rápida</option><option value="416" selected>Qualidade: equilibrada</option><option value="512">Qualidade: alta</option></select><button class="o" id="rs">Zerar contagem</button></div>
+<div id="er"></div>
+<div class="g"><div class="c"><h3>Câmera ao vivo</h3><div class="v"><video id="vid" muted playsinline></video><canvas id="ov"></canvas></div></div>
+<div class="c"><h3>Mapa de calor (fundo preto, quadrados = concentração)</h3><canvas id="hm" width="640" height="480"></canvas>
+<div class="bar" style="margin-top:8px"></div><div class="s" style="display:flex;justify-content:space-between"><span>baixa</span><span>moderada</span><span>elevada</span><span>muito elevada</span></div></div></div>
+<h3 style="margin-top:14px">Agora na câmera</h3><div class="k"><div><small>Pessoas agora</small><b id="t">0</b></div><div><small class="m">Masculino</small><b class="m" id="m">0</b></div><div><small class="f">Feminino</small><b class="f" id="f">0</b></div><div><small>Inconclusivo</small><b id="u">0</b></div></div>
+<h3 style="margin-top:14px">Acumulado (já contadas desde o início)</h3><div class="k"><div><small>Total de pessoas</small><b id="q">0</b></div><div><small class="m">Masculino (total)</small><b class="m" id="qm">0</b></div><div><small class="f">Feminino (total)</small><b class="f" id="qf">0</b></div><div><small>Inconclusivo (total)</small><b id="qu">0</b></div></div>
+<div class="s">Caixas: <span class="m">■ masculino</span> · <span class="f">■ feminino</span> · ■ inconclusivo (cada caixa = uma pessoa). O sexo é uma <b>estimativa aproximada pela aparência</b> (só aparece após algumas leituras estáveis), não identifica ninguém e pode errar. O acumulado fica salvo neste navegador só como números. Tudo roda no seu navegador: nenhuma imagem é gravada nem enviada, e não há reconhecimento facial.</div>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js"></script>
+<script>
+const $=s=>document.querySelector(s),vid=$('#vid'),ov=$('#ov'),ox=ov.getContext('2d'),hm=$('#hm'),hx=hm.getContext('2d'),GX=32,GY=24,CL={M:'#00e5ff',F:'#ff00c8','?':'#e6e6e6'};
+let heat=new Float32Array(GX*GY),tracks=new Map(),nid=1,counted=new Set(),cum=(()=>{try{return JSON.parse(localStorage.getItem("tc_cum"))||{t:0,m:0,f:0}}catch(e){return{t:0,m:0,f:0}}})(),votes={},on=false,coco=null,ready=false,stream,fps=0,last=performance.now();
+const er=t=>$('#er').textContent=t||'',st=(c,t)=>$('#st').innerHTML=`<span class="dot" style="background:${c}"></span>${t}`;
+async function init(){try{const M='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/';
+ await faceapi.nets.tinyFaceDetector.loadFromUri(M);await faceapi.nets.ageGenderNet.loadFromUri(M);
+ try{window.tf=faceapi.tf;await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js';s.onload=ok;s.onerror=no;document.head.appendChild(s)});coco=await cocoSsd.load({base:'lite_mobilenet_v2'})}
+ catch(e){coco=null;er('Detector de corpo inteiro indisponível: usando só detecção de rostos (funciona melhor de perto).')}
+ ready=true;$('#go').disabled=false;st('#e5484d','câmera desligada · IA pronta')}
+ catch(e){er('Não foi possível carregar os modelos de IA (precisa de internet). '+e.message);st('#e5484d','erro ao carregar')}}
+async function devs(){try{const d=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind=='videoinput');$('#dv').innerHTML=d.map((v,i)=>`<option value="${v.deviceId}">${v.label||'Câmera '+(i+1)}</option>`).join('')}catch(e){}}
+async function start(){er();if(!ready)return;if(!navigator.mediaDevices)return er('Câmera bloqueada nesta origem. Abra este arquivo no Chrome/Edge ou use http://localhost.');
+ try{stream=await navigator.mediaDevices.getUserMedia({video:Object.assign({width:{ideal:1280},height:{ideal:720}},$('#dv').value?{deviceId:{exact:$('#dv').value}}:{}),audio:false})}catch(e){return er('Não foi possível abrir a câmera ('+e.name+'). Permita o acesso e feche outros programas que usam a câmera.')}
+ vid.srcObject=stream;await vid.play();devs();on=true;st('#2ea043','câmera ligada');tick()}
+function stop(){on=false;if(stream)stream.getTracks().forEach(t=>t.stop());vid.srcObject=null;ox.clearRect(0,0,ov.width,ov.height);st('#e5484d','câmera desligada')}
+function saveCum(){try{localStorage.setItem('tc_cum',JSON.stringify(cum))}catch(e){}}
+function showCum(){$('#q').textContent=cum.t;$('#qm').textContent=cum.m;$('#qf').textContent=cum.f;$('#qu').textContent=Math.max(0,cum.t-cum.m-cum.f)}
+function reset(){heat.fill(0);counted.clear();votes={};tracks.clear();cum={t:0,m:0,f:0};saveCum();showCum()}
+$('#go').onclick=start;$('#stop').onclick=stop;$('#rs').onclick=reset;
+function assign(d,vw){const ids=[],used=new Set();for(const p of d){const cx=(p.b[0]+p.b[2])/2,cy=(p.b[1]+p.b[3])/2;let best=null,bd=1e9;
+ for(const[t,o]of tracks){const dd=Math.hypot(cx-o.x,cy-o.y);if(!used.has(t)&&dd<bd){bd=dd;best=t}}
+ const old=best!==null&&bd<=.15*vw?tracks.get(best):null;if(!old)best=nid++;used.add(best);tracks.set(best,{x:cx,y:cy,m:0,h:(old?old.h:0)+1});ids.push(best)}
+ for(const[t,o]of tracks)if(!used.has(t)){o.m++;if(o.m>30)tracks.delete(t)}return ids}
+async function tick(){if(!on)return;try{const vw=vid.videoWidth,vh=vid.videoHeight;if(!vw)return setTimeout(tick,100);
+ let P=[];if(coco)(await coco.detect(vid)).forEach(p=>{if(p.class=='person'&&p.score>.5)P.push({b:[p.bbox[0],p.bbox[1],p.bbox[0]+p.bbox[2],p.bbox[1]+p.bbox[3]],f:null})});
+ const opt=new faceapi.TinyFaceDetectorOptions({inputSize:+$('#ql').value,scoreThreshold:.45});
+ const fs=($('#gd').checked?await faceapi.detectAllFaces(vid,opt).withAgeAndGender():(await faceapi.detectAllFaces(vid,opt)).map(r=>({detection:r}))).map(r=>({b:r.detection.box,g:r.gender,gp:r.genderProbability}));
+ const inside=(f,b)=>{const cx=f.b.x+f.b.width/2,cy=f.b.y+f.b.height/2;return cx>=b[0]&&cx<=b[2]&&cy>=b[1]&&cy<=b[1]+(b[3]-b[1])*.5};
+ P.forEach(p=>p.f=fs.find(f=>inside(f,p.b))||null);
+ fs.forEach(f=>{if(!P.some(p=>inside(f,p.b))){const{x,y,width:w,height:h}=f.b;P.push({b:[Math.max(0,x-w),Math.max(0,y-h*.3),Math.min(vw,x+2*w),Math.min(vh,y+4*h)],f})}});
+ const ids=assign(P,vw);heat=heat.map(v=>v*.985);ox.clearRect(0,0,ov.width,ov.height);ov.width=ov.clientWidth;ov.height=ov.clientHeight;
+ const sx=ov.width/vw,sy=ov.height/vh;let M=0,F=0,U=0,chg=false;ox.lineWidth=2;ox.font='bold 13px system-ui';
+ P.forEach((p,k)=>{const id=ids[k];let g='?',gc=0;const v=votes[id]||(votes[id]={m:0,f:0,n:0,fin:null});if(tracks.get(id).h>=5&&!counted.has(id)){counted.add(id);cum.t++;chg=true}
+  if(p.f&&p.f.g&&p.f.b.width>=45){v.n++;v.m+=p.f.g=='male'?p.f.gp:1-p.f.gp;v.f+=p.f.g=='female'?p.f.gp:1-p.f.gp}
+  if($('#gd').checked&&v.n>=5){const pm=v.m/v.n,pf=v.f/v.n;if(Math.max(pm,pf)>=.7){g=pm>pf?'M':'F';gc=Math.max(pm,pf)}}
+  if(g!='?'&&!v.fin&&counted.has(id)){v.fin=g;g=='M'?cum.m++:cum.f++;chg=true}if(v.fin&&g=='?'){g=v.fin;gc=.7}
+  p.g=g;g=='M'?M++:g=='F'?F++:U++;
+  const cx=Math.min(GX-1,Math.floor((p.b[0]+p.b[2])/2/vw*GX)),cy=Math.min(GY-1,Math.floor(p.b[3]/vh*GY));
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const X=cx+dx,Y=cy+dy;if(X>=0&&Y>=0&&X<GX&&Y<GY)heat[Y*GX+X]+=dx==0&&dy==0?1:.4}
+  ox.strokeStyle=ox.fillStyle=CL[g];ox.strokeRect(p.b[0]*sx,p.b[1]*sy,(p.b[2]-p.b[0])*sx,(p.b[3]-p.b[1])*sy);
+  ox.fillText(g=='?'?'pessoa':g+' '+Math.round(gc*100)+'%',p.b[0]*sx,Math.max(12,p.b[1]*sy-4))});
+ const W=hm.width,H=hm.height,cw=W/GX,ch=H/GY,mx=Math.max(5,...heat);hx.fillStyle='#000';hx.fillRect(0,0,W,H);
+ heat.forEach((h,i)=>{const v=Math.min(1,h/mx);if(v>.04){hx.fillStyle=`hsl(${240-240*v},100%,${22+28*v}%)`;hx.fillRect((i%GX)*cw+1,Math.floor(i/GX)*ch+1,cw-2,ch-2)}});
+ if(!P.length){hx.fillStyle='#8a96a5';hx.font='14px system-ui';hx.fillText('Nenhuma pessoa detectada agora',12,24)}
+ hx.lineWidth=2;hx.font='bold 13px system-ui';P.forEach(p=>{hx.strokeStyle=hx.fillStyle=CL[p.g];hx.strokeRect(p.b[0]/vw*W,p.b[1]/vh*H,(p.b[2]-p.b[0])/vw*W,(p.b[3]-p.b[1])/vh*H);hx.fillText(p.g=='?'?'pessoa':p.g,p.b[0]/vw*W,Math.max(12,p.b[1]/vh*H-4))});
+ $('#t').textContent=P.length;$('#m').textContent=M;$('#f').textContent=F;$('#u').textContent=U;if(chg)saveCum();showCum();
+ const now=performance.now();fps=.8*fps+.2*1000/(now-last);last=now;st('#2ea043','câmera ligada · '+fps.toFixed(1)+' quadros/s')}
+ catch(e){er('Erro na detecção: '+e.message)}setTimeout(tick,30)}
+init();devs();showCum();
+</script></body></html>
