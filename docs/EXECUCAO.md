@@ -16,7 +16,7 @@ O repositório inclui uma demonstração experimental de **visão computacional*
 
 1. No GitHub, baixe o repositório pelo botão **Code → Download ZIP** e extraia os arquivos. **O visualizador de código do GitHub não executa o HTML**.
 2. Abra a pasta **`Prototipos`** do projeto.
-3. Localize o arquivo **`thermocount-ia (1).html`**.
+3. Localize o arquivo **`thermocount_fps_otimizado`**.
 4. Clique duas vezes no arquivo para abri-lo no **Google Chrome** ou **Microsoft Edge**. Se necessário, clique com o botão direito → **Abrir com** → navegador.
 5. Com acesso à internet, aguarde a mensagem **“câmera desligada · IA pronta”**, que indica o carregamento dos modelos.
 6. Clique em **Abrir câmera** e permita o acesso à câmera quando solicitado.

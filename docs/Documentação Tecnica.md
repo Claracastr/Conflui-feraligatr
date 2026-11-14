@@ -4,6 +4,7 @@
 > Plataforma web para observação da ocupação, análise histórica e apoio à gestão operacional de shopping centers.
 
 **MVP:** https://conflui-feraligatr-production.up.railway.app  
+Para melhor experiência entrar com o login email:clara.castrosts@gmail.com|senha:Cc@840352170612
 **Código-fonte:** https://github.com/Claracastr/Conflui-feraligatr  
 **Guia de instalação:** [README_INSTRUCOES_EXECUCAO.md](README_INSTRUCOES_EXECUCAO.md)
 
