@@ -1,0 +1,1117 @@
+{
+  "info": {
+    "name": "Conflui — API administrativa",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Executar apenas no banco local de demonstração. A coleção cria, edita e exclui os próprios registros de teste. Repetir requer novos IDs de evento/amostra ou banco de teste limpo; não rode em produção. Campos de segredo ficam vazios no ambiente. Login usa o Cookie Jar."
+  },
+  "item": [
+    {
+      "name": "01 Saúde",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/health",
+        "description": "01 Saúde. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Exemplo de contrato",
+          "originalRequest": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/health",
+            "description": "01 Saúde. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"status\": \"ok\",\n  \"data_mode\": \"simulator\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "02 Login administrativo",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/auth/login",
+        "description": "02 Login administrativo. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Cookie de sessão\",()=>pm.expect(pm.response.headers.get(\"Set-Cookie\")).to.include(\"HttpOnly\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Administrador atual",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/auth/me",
+        "description": "03 Administrador atual. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Pavimentos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/floors",
+        "description": "04 Pavimentos. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Setores",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/sectors",
+        "description": "05 Setores. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Câmeras e cobertura",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/cameras",
+        "description": "06 Câmeras e cobertura. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Registrar observação",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Ingest-Key",
+            "value": "{{ingest_key}}"
+          }
+        ],
+        "url": "{{base_url}}/observations",
+        "description": "07 Registrar observação. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"observation_id\": \"{{observationId}}\",\n  \"camera_id\": \"sim-cinema\",\n  \"sector_id\": \"cinema\",\n  \"captured_at\": \"{{capturedAt}}\",\n  \"count\": 12,\n  \"positions\": [\n    {\n      \"x\": 700,\n      \"y\": 500\n    }\n  ],\n  \"coordinate_system\": \"map_1000x734\",\n  \"source\": \"simulator\",\n  \"status\": \"available\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Exemplo de contrato",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Ingest-Key",
+                "value": "{{ingest_key}}"
+              }
+            ],
+            "url": "{{base_url}}/observations",
+            "description": "07 Registrar observação. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"observation_id\": \"{{observationId}}\",\n  \"camera_id\": \"sim-cinema\",\n  \"sector_id\": \"cinema\",\n  \"captured_at\": \"{{capturedAt}}\",\n  \"count\": 12,\n  \"positions\": [\n    {\n      \"x\": 700,\n      \"y\": 500\n    }\n  ],\n  \"coordinate_system\": \"map_1000x734\",\n  \"source\": \"simulator\",\n  \"status\": \"available\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"id\": \"observation-example\",\n  \"duplicate\": false\n}"
+        }
+      ]
+    },
+    {
+      "name": "08 Reenviar mesma observação",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Ingest-Key",
+            "value": "{{ingest_key}}"
+          }
+        ],
+        "url": "{{base_url}}/observations",
+        "description": "08 Reenviar mesma observação. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"observation_id\": \"{{observationId}}\",\n  \"camera_id\": \"sim-cinema\",\n  \"sector_id\": \"cinema\",\n  \"captured_at\": \"{{capturedAt}}\",\n  \"count\": 12,\n  \"positions\": [\n    {\n      \"x\": 700,\n      \"y\": 500\n    }\n  ],\n  \"coordinate_system\": \"map_1000x734\",\n  \"source\": \"simulator\",\n  \"status\": \"available\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Reenvio idempotente\",()=>pm.expect(pm.response.json().duplicate).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Ao vivo global",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/occupancy/live",
+        "description": "09 Ao vivo global. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Todos os setores\",()=>pm.expect(pm.response.json().total_sectors).to.eql(18));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Histórico global",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/occupancy/history?date={{date}}&minute=1080",
+        "description": "10 Histórico global. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Histórico meia-noite",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/occupancy/history?date={{date}}&minute=1440",
+        "description": "11 Histórico meia-noite. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Linha do tempo",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/occupancy/timeline?date={{date}}&start=540&end=1440&step=15",
+        "description": "12 Linha do tempo. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Comparar datas",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/occupancy/compare?date_a={{date}}&date_b={{compare_date}}&minute=1080",
+        "description": "13 Comparar datas. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Calendário",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/calendar?year={{year}}&month={{month}}",
+        "description": "14 Calendário. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Registrar passagem",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Ingest-Key",
+            "value": "{{ingest_key}}"
+          }
+        ],
+        "url": "{{base_url}}/passages",
+        "description": "15 Registrar passagem. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"{{passageId}}\",\n  \"source\": \"simulator\",\n  \"start_at\": \"{{passageStart}}\",\n  \"end_at\": \"{{capturedAt}}\",\n  \"origin\": \"cinema\",\n  \"destination\": \"central-leste\",\n  \"count\": 9\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 Fluxos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/flows?date={{date}}&start=540&end=1440&origin=cinema",
+        "description": "16 Fluxos. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assistente IA",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/assistant/analyze",
+        "description": "Assistente IA. Consulta dados reais do shopping e devolve observações, interpretações e sugestões para gestão do espaço.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Como estava a praça central no dia 02/01/2026 às 16h?\",\n  \"context\": {\n    \"date\": \"2026-01-02\",\n    \"time\": \"16:00\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 Criar evento",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/events",
+        "description": "17 Criar evento. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"postman-event\",\n  \"name\": \"Evento de teste Postman\",\n  \"category\": \"Parque infantil\",\n  \"startDate\": \"{{date}}\",\n  \"endDate\": \"{{date}}\",\n  \"start\": 840,\n  \"end\": 1200,\n  \"sectors\": [\n    \"eventos-central\"\n  ],\n  \"audience\": \"Famílias\",\n  \"description\": \"Registro de teste, não evento real\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 Listar eventos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/events?offset=0&limit=100",
+        "description": "18 Listar eventos. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 Editar evento",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/events/postman-event",
+        "description": "19 Editar evento. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"postman-event\",\n  \"name\": \"Evento de teste Postman\",\n  \"category\": \"Parque infantil\",\n  \"startDate\": \"{{date}}\",\n  \"endDate\": \"{{date}}\",\n  \"start\": 840,\n  \"end\": 1200,\n  \"sectors\": [\n    \"eventos-central\"\n  ],\n  \"audience\": \"Famílias\",\n  \"description\": \"Descrição editada\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 Análise do evento",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/events/postman-event/analysis?date={{date}}&compare_date={{compare_date}}",
+        "description": "20 Análise do evento. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 Datas especiais",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/special-dates",
+        "description": "21 Datas especiais. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 Cadastrar data especial",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/special-dates/postman-special",
+        "description": "22 Cadastrar data especial. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"postman-special\",\n  \"name\": \"Data de teste\",\n  \"date\": \"{{date}}\",\n  \"type\": \"Data especial interna\",\n  \"scope\": \"Shopping\",\n  \"source\": \"Cadastro demonstrativo do Postman\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 Favoritar",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/favorites/cinema",
+        "description": "23 Favoritar. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24 Consultar favoritos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/favorites",
+        "description": "24 Consultar favoritos. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25 Desfavoritar",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/favorites/cinema",
+        "description": "25 Desfavoritar. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "26 Criar marcação",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/annotations/postman-marker",
+        "description": "26 Criar marcação. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"postman-marker\",\n  \"date\": \"{{date}}\",\n  \"minute\": 900,\n  \"sector\": \"cinema\",\n  \"text\": \"Marcação de teste\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "27 Marcações",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/annotations",
+        "description": "27 Marcações. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "28 Registrar amostra independente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/profiles",
+        "description": "28 Registrar amostra independente. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"postman-profile\",\n  \"date\": \"{{date}}\",\n  \"sectors\": [\n    \"cinema\"\n  ],\n  \"n\": 10,\n  \"gender\": {\n    \"Mulheres\": 4,\n    \"Homens\": 3,\n    \"Outra identificação\": 1,\n    \"Não informado\": 2\n  },\n  \"age\": {\n    \"Crianças · 0–11\": 2,\n    \"Adolescentes · 12–17\": 1,\n    \"Adultos · 18–59\": 4,\n    \"Pessoas idosas · 60+\": 1,\n    \"Não informado\": 2\n  },\n  \"source\": \"simulator\",\n  \"provenance\": \"Amostra sintética de teste independente\",\n  \"from\": 540,\n  \"to\": 1440\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "29 Perfil agregado",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/profiles?date={{date}}&sector=cinema",
+        "description": "29 Perfil agregado. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Denominadores\",()=>{const d=pm.response.json();Object.values(d.dimensions).forEach(rows=>pm.expect(rows.reduce((sum,r)=>sum+r.count,0)).to.eql(d.n))});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "30 Relatório JSON",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/reports/occupancy?date={{date}}&minute=1080",
+        "description": "30 Relatório JSON. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "31 Relatório CSV",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/reports/occupancy?date={{date}}&minute=1080&format=csv",
+        "description": "31 Relatório CSV. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "32 Exclusão de marcação de teste",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/annotations/postman-marker",
+        "description": "32 Exclusão de marcação de teste. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "33 Exclusão de evento de teste",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/events/postman-event",
+        "description": "33 Exclusão de evento de teste. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "34 Exclusão de data especial de teste",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/special-dates/postman-special",
+        "description": "34 Exclusão de data especial de teste. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "35 Logout",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/auth/logout",
+        "description": "35 Logout. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "36 Consulta sem sessão",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/auth/me",
+        "description": "36 Consulta sem sessão. O ambiente fornecido é sintético. Login usa o cookie HttpOnly, mantido automaticamente pelo Postman."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if(!pm.environment.get(\"capturedAt\")){pm.environment.set(\"capturedAt\",new Date().toISOString());}",
+          "if(!pm.environment.get(\"observationId\")){pm.environment.set(\"observationId\",\"postman-\"+Date.now());}",
+          "if(!pm.environment.get(\"passageId\")){pm.environment.set(\"passageId\",\"postman-passage-\"+Date.now());}",
+          "if(!pm.environment.get(\"passageStart\")){pm.environment.set(\"passageStart\",new Date(new Date(pm.environment.get(\"capturedAt\")).getTime()-900000).toISOString());}"
+        ]
+      }
+    }
+  ]
+}

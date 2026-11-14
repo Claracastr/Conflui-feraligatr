@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#153f35" />
+    <title>Conflui — O movimento ganha sentido</title>
+    <meta
+      name="description"
+      content="Protótipo de inteligência de ocupação do Capim Dourado Shopping, com mapa de calor dinâmico e análise por setor."
+    />
+    <link rel="stylesheet" href="tailwind.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app"><p style="padding: 32px">Carregando o Conflui…</p></div>
+    <div id="toast" role="status" class="toast" hidden></div>
+    <script>
+      window.addEventListener("error", (e) => {
+        const toast = document.getElementById("toast");
+        toast.hidden = false;
+        toast.textContent = "Falha ao carregar a interface: " + e.message;
+      });
+    </script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

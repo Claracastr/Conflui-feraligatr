@@ -1,0 +1,16 @@
+{
+  "name": "conflui-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tailwindcss -i src/tailwind.css -o tailwind.css --minify && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.js"
+  },
+  "devDependencies": {
+    "vite": "6.3.5",
+    "tailwindcss": "4.1.7",
+    "@tailwindcss/cli": "4.1.7"
+  }
+}

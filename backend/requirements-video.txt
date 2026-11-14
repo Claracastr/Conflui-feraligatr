@@ -1,0 +1,7 @@
+-r requirements.txt
+opencv-python-headless==4.11.0.86
+ultralytics==8.3.127
+numpy==2.2.6
+torch==2.7.0
+torchvision==0.22.0
+lap==0.5.12
